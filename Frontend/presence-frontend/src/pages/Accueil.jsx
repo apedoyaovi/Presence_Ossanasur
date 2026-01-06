@@ -13,12 +13,8 @@ import {
     Play,
     HelpCircle,
     Camera,
-    Download,
     AlertTriangle,
-    User,
     FileText,
-    ChevronDown,
-    QrCode
 } from 'lucide-react';
 import { scanService } from '../services/api';
 
@@ -81,6 +77,7 @@ const Accueil = () => {
     // Références
     const scannerRef = useRef(null);
     const qrScannerInstance = useRef(null);
+    const laserRef = useRef(null);
 
     // Cleanup: Arrêter le scanner si le composant se démonte
     useEffect(() => {
@@ -92,6 +89,32 @@ const Accueil = () => {
             }
         };
     }, []);
+
+    // Effet pour l'animation du laser
+    useEffect(() => {
+        if (isScanning && laserRef.current) {
+            const laser = laserRef.current;
+            
+            const animateLaser = () => {
+                laser.style.transition = 'top 1.8s linear';
+                laser.style.top = 'calc(100% - 4px)';
+                
+                setTimeout(() => {
+                    laser.style.transition = 'none';
+                    laser.style.top = '0%';
+                    setTimeout(() => {
+                        if (isScanning) animateLaser();
+                    }, 100);
+                }, 1800);
+            };
+            
+            animateLaser();
+            
+            return () => {
+                laser.style.transition = 'none';
+            };
+        }
+    }, [isScanning]);
 
     // Gérer la sélection d'une action
     const handleActionSelect = (action) => {
@@ -137,8 +160,6 @@ const Accueil = () => {
                 const onScanSuccess = (decodedText) => {
                     // Vérifier que le QR code correspond au format attendu
                     if (decodedText.startsWith('EMP:')) {
-                        // Laisser `handleScanSuccess` arrêter/clear le scanner pour éviter
-                        // d'appels concurrents à `clear()` qui provoquent des transitions en conflit.
                         handleScanSuccess(decodedText);
                     } else {
                         toast.warning('Format de QR code invalide');
@@ -254,8 +275,7 @@ const Accueil = () => {
         }
     };
 
-    // Simuler le scan d'un QR code
-    // Annuler le scan
+    // Annuler le scan (sans réinitialiser complètement)
     const handleCancelScan = () => {
         if (qrScannerInstance.current) {
             qrScannerInstance.current.clear().then(() => {
@@ -267,11 +287,18 @@ const Accueil = () => {
         }
         setIsScanning(false);
         setIsScannerReady(false);
-        resetForm();
+        setCameraError(null);
+        // Ne pas réinitialiser selectedAction ici
     };
 
-    // Réinitialiser le formulaire
+    // Réinitialiser complètement le formulaire
     const resetForm = () => {
+        if (qrScannerInstance.current) {
+            qrScannerInstance.current.clear().catch(error => {
+                console.error('Erreur lors de l\'arrêt du scanner:', error);
+            });
+            qrScannerInstance.current = null;
+        }
         setSelectedAction(null);
         setIsScanning(false);
         setIsScannerReady(false);
@@ -473,14 +500,48 @@ const Accueil = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="relative mx-auto w-full max-w-md">
-                                                        {/* Conteneur du scanner */}
-                                                        <div 
-                                                            id="qr-reader" 
-                                                            className="rounded-xl overflow-hidden border-4 border-emerald-500 border-dashed bg-gray-50"
-                                                        ></div>
+                                                        {/* Conteneur du scanner avec effet laser professionnel */}
+                                                        <div className="relative rounded-xl overflow-hidden border-2 border-gray-300 bg-gray-50 shadow-lg">
+                                                            <div 
+                                                                id="qr-reader" 
+                                                                className="relative z-0"
+                                                            ></div>
+                                                            
+                                                            {/* Effet de laser professionnel */}
+                                                            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                                                {/* Laser line avec effet lumineux */}
+                                                                <div 
+                                                                    ref={laserRef}
+                                                                    className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 shadow-[0_0_10px_#10B981] z-10"
+                                                                    style={{
+                                                                        top: '0%',
+                                                                        boxShadow: '0 0 8px #10B981, 0 0 12px rgba(16, 185, 129, 0.6)'
+                                                                    }}
+                                                                >
+                                                                    {/* Point central plus lumineux */}
+                                                                    <div className="absolute left-1/2 transform -translate-x-1/2 w-3 h-3 bg-white rounded-full shadow-[0_0_15px_#10B981]"></div>
+                                                                </div>
+                                                                
+                                                                {/* Effet de rayon laser */}
+                                                                <div className="absolute left-0 right-0 top-0 h-[1px] bg-emerald-300/50 blur-[1px]"></div>
+                                                            </div>
+                                                            
+                                                            {/* Repères visuels pour le cadre de scan */}
+                                                            <div className="absolute inset-0 pointer-events-none">
+                                                                {/* Lignes de repère fines */}
+                                                                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-emerald-500/20"></div>
+                                                                <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-emerald-500/20"></div>
+                                                                
+                                                                {/* Points de repère aux coins */}
+                                                                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-emerald-500"></div>
+                                                                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-emerald-500"></div>
+                                                                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-emerald-500"></div>
+                                                                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-emerald-500"></div>
+                                                            </div>
+                                                        </div>
 
                                                         {/* Instructions */}
-                                                        <div className="mt-4 text-center">
+                                                        <div className="mt-4 text-center space-y-2">
                                                             {!isScannerReady && !cameraError && (
                                                                 <div className="flex items-center justify-center space-x-2">
                                                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500"></div>
@@ -490,9 +551,18 @@ const Accueil = () => {
                                                                 </div>
                                                             )}
                                                             {isScannerReady && (
-                                                                <div className="text-emerald-600 font-medium">
-                                                                    Caméra prête • Présentez le QR code
-                                                                </div>
+                                                                <>
+                                                                    <div className="text-emerald-600 font-medium">
+                                                                        <div className="flex items-center justify-center space-x-2">
+                                                                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                                                            <span>Scanner actif • Alignez le QR code</span>
+                                                                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        Centrez le QR code dans le cadre
+                                                                    </p>
+                                                                </>
                                                             )}
                                                             {isLoading && (
                                                                 <div className="flex items-center justify-center space-x-2">
@@ -580,14 +650,16 @@ const Accueil = () => {
                                         {/* Boutons d'action */}
                                         {!scanResult && (
                                             <div className="mt-8 flex justify-center space-x-4">
+                                                {/* Bouton Annuler (réinitialise tout) */}
                                                 <button
-                                                    onClick={handleCancelScan}
-                                                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                                                    onClick={resetForm}
+                                                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
                                                 >
                                                     Annuler
                                                 </button>
 
                                                 {isScanning && isScannerReady && !isLoading && (
+                                                    /* Bouton Arrêter le scan (retourne à Démarrer le scan) */
                                                     <button
                                                         onClick={handleCancelScan}
                                                         className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
@@ -600,12 +672,22 @@ const Accueil = () => {
 
                                         {/* Bouton pour retourner */}
                                         {scanResult && (
-                                            <div className="mt-8 text-center">
+                                            <div className="mt-8 text-center space-x-4">
                                                 <button
-                                                    onClick={resetForm}
+                                                    onClick={() => {
+                                                        setScanResult(null);
+                                                        setCustomReason('');
+                                                        setCameraError(null);
+                                                    }}
                                                     className="px-6 py-3 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors cursor-pointer"
                                                 >
                                                     Nouveau scan
+                                                </button>
+                                                <button
+                                                    onClick={resetForm}
+                                                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                                                >
+                                                    Changer d'action
                                                 </button>
                                             </div>
                                         )}

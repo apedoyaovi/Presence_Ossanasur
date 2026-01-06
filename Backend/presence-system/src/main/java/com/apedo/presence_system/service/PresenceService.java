@@ -146,6 +146,48 @@ public class PresenceService {
             throw new IllegalArgumentException("L'action '" + action + "' a déjà été enregistrée pour cet employé aujourd'hui.");
         }
 
+        // ===== VALIDATIONS MÉTIER =====
+        LocalTime now = LocalTime.now();
+        List<Presence> todayPresences = presenceRepository.findByEmployeId(employe.getId()).stream()
+                .filter(p -> p.getDatePresence().equals(LocalDate.now()) && p.getIsActive())
+                .collect(Collectors.toList());
+
+        // Validation 1: L'arrivée doit être la première action de la journée
+        if (!action.equals("ARRIVAL")) {
+            boolean hasArrival = todayPresences.stream()
+                    .anyMatch(p -> p.getAction().equals("ARRIVAL"));
+            
+            if (!hasArrival) {
+                throw new IllegalArgumentException("Vous devez d'abord enregistrer votre arrivée avant d'effectuer une autre action.");
+            }
+        }
+
+        // Validation 2: Les actions de pause doivent être entre 12h et 15h
+        if (action.equals("PAUSE_START") || action.equals("PAUSE_END")) {
+            int hour = now.getHour();
+            if (hour < 12 || hour >= 15) {
+                throw new IllegalArgumentException("Les actions de pause doivent être effectuées entre 12h00 et 14h59.");
+            }
+        }
+
+        // Validation 3: Le retour de pause (PAUSE_END) ne peut être fait que si PAUSE_START a été enregistré
+        if (action.equals("PAUSE_END")) {
+            boolean hasPauseStart = todayPresences.stream()
+                    .anyMatch(p -> p.getAction().equals("PAUSE_START"));
+            
+            if (!hasPauseStart) {
+                throw new IllegalArgumentException("Vous devez d'abord enregistrer un départ pour la pause avant de pouvoir enregistrer un retour de pause.");
+            }
+        }
+
+        // Validation 4: Le départ fin (DEPARTURE) ne peut être fait que après 18h
+        if (action.equals("DEPARTURE")) {
+            int hour = now.getHour();
+            if (hour < 18) {
+                throw new IllegalArgumentException("Vous pouvez enregistrer un départ fin uniquement à partir de 18h00.");
+            }
+        }
+
         // Créer un nouvel enregistrement de présence
         Presence presence = new Presence();
         presence.setEmploye(employe);

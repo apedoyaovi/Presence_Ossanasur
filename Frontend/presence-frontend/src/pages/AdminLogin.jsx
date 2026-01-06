@@ -216,7 +216,7 @@ const AdminLogin = () => {
                                         <div>
                                             <p className="text-sm font-medium text-red-800">{error}</p>
                                             <p className="text-xs text-red-600 mt-1">
-                                                Identifiants de test: admin@system.com / admin123
+                                                Identifiants de connexion incorrects. Veuillez réessayer.
                                             </p>
                                         </div>
                                     </div>

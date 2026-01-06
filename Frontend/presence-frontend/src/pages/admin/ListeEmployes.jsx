@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Loader2, Plus, Users, QrCode, Clock, Search, XCircle, Download, Edit, Trash2, Mail, Send } from 'lucide-react';
+import { Loader2, Plus, Users, QrCode, Clock, Search, XCircle, Download, Edit, Trash2, Mail, Send, Check } from 'lucide-react';
 import { employeeService } from '../../services/api'; // Mettre à jour l'import
 
 const formatDate = (dateString) => {
@@ -27,6 +27,7 @@ const ListeEmployes = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDept, setFilterDept] = useState('all');
     const [sending, setSending] = useState(false);
+    const [selectedEmployees, setSelectedEmployees] = useState(new Set());
 
     // Récupérer les employés depuis l'API
     const fetchEmployees = useCallback(async () => {
@@ -90,6 +91,48 @@ const ListeEmployes = () => {
         navigate(`/admin/dashboard/creation?id=${employe.id}`);
     };
 
+    const handleSelectEmployee = (employeeId) => {
+        const newSelected = new Set(selectedEmployees);
+        if (newSelected.has(employeeId)) {
+            newSelected.delete(employeeId);
+        } else {
+            newSelected.add(employeeId);
+        }
+        setSelectedEmployees(newSelected);
+    };
+
+    const handleSelectAll = () => {
+        if (selectedEmployees.size === filteredEmployes.length && filteredEmployes.length > 0) {
+            setSelectedEmployees(new Set());
+        } else {
+            setSelectedEmployees(new Set(filteredEmployes.map(e => e.id)));
+        }
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedEmployees.size === 0) {
+            toast.warning("Veuillez sélectionner au moins un employé", { position: "top-right" });
+            return;
+        }
+
+        if (!window.confirm(`Êtes-vous sûr de vouloir désactiver ${selectedEmployees.size} employé(s) ? Cette action est réversible.`)) {
+            return;
+        }
+
+        try {
+            for (const employeeId of selectedEmployees) {
+                await employeeService.delete(employeeId);
+            }
+            
+            setEmployes(employes.filter(emp => !selectedEmployees.has(emp.id)));
+            setSelectedEmployees(new Set());
+            toast.success(`${selectedEmployees.size} employé(s) désactivé(s) avec succès`, { position: "top-right" });
+        } catch (err) {
+            console.error("Erreur lors de la désactivation:", err);
+            toast.error("Erreur lors de la désactivation des employés", { position: "top-right" });
+        }
+    };
+
     const handleSendQrCode = async (method) => {
         if (!qrData) return;
         
@@ -140,7 +183,7 @@ const ListeEmployes = () => {
         document.body.removeChild(downloadLink);
     };
 
-    // Filtrage
+    // Filtrage et tri par date d'embauche (les plus récents en premier)
     const filteredEmployes = employes.filter(employe => {
         const fullName = `${employe.firstName} ${employe.lastName}`.toLowerCase();
         const matchesSearch =
@@ -149,11 +192,25 @@ const ListeEmployes = () => {
             (employe.email && employe.email.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesDept = filterDept === 'all' || employe.department === filterDept;
         return employe.isActive && matchesSearch && matchesDept;
+    }).sort((a, b) => {
+        // Trier par hireDate en ordre décroissant (les plus récents en premier)
+        const dateA = new Date(a.hireDate || 0);
+        const dateB = new Date(b.hireDate || 0);
+        return dateB - dateA;
     });
 
     const departements = ['all', ...new Set(employes.map(e => e.department).filter(d => d))];
     const totalEmployes = employes.filter(e => e.isActive).length;
-    const devCount = employes.filter(e => e.isActive && e.department === 'Développement').length;
+    // Calculer le nombre d'employés par département
+    const getEmployeesByDepartment = () => {
+        const deptMap = {};
+        departements.filter(d => d !== 'all').forEach(dept => {
+            deptMap[dept] = employes.filter(e => e.isActive && e.department === dept).length;
+        });
+        return deptMap;
+    };
+
+    const employeesByDept = getEmployeesByDepartment();
     const new2025Count = employes.filter(e => {
         if (!e.hireDate) return false;
         try {
@@ -219,29 +276,21 @@ const ListeEmployes = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Développement</p>
-                                    <p className="text-2xl font-bold text-gray-800">
-                                        {devCount}
-                                    </p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
-                                    <QrCode className="w-6 h-6" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">QR générés</p>
-                                    <p className="text-2xl font-bold text-gray-800">{totalEmployes}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
-                                    <QrCode className="w-6 h-6" />
-                                </div>
+                        <div className="lg:col-span-2">
+                            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+                                <h3 className="text-sm font-medium text-gray-600 mb-3">Employés par Département</h3>
+                                {Object.keys(employeesByDept).length === 0 ? (
+                                    <p className="text-sm text-gray-500">Aucun département disponible</p>
+                                ) : (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {Object.entries(employeesByDept).map(([dept, count]) => (
+                                            <div key={dept} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded">
+                                                <div className="text-sm text-gray-700 truncate">{dept}</div>
+                                                <div className="text-sm font-semibold text-gray-800">{count}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -310,6 +359,15 @@ const ListeEmployes = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-emerald-600">
                                 <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedEmployees.size === filteredEmployes.length && filteredEmployes.length > 0}
+                                            onChange={handleSelectAll}
+                                            className="w-4 h-4 cursor-pointer"
+                                            title="Sélectionner tous"
+                                        />
+                                    </th>
                                     {['ID', 'Nom & Prénom', 'Matricule', 'Email', 'Département', 'Date embauche', 'Actions'].map((header) => (
                                         <th
                                             key={header}
@@ -324,7 +382,15 @@ const ListeEmployes = () => {
                             <tbody className="divide-y divide-gray-200">
                                 {filteredEmployes.length > 0 ? (
                                     filteredEmployes.map((employe) => (
-                                        <tr key={employe.id} className="hover:bg-gray-50">
+                                        <tr key={employe.id} className={`hover:bg-gray-50 ${selectedEmployees.has(employe.id) ? 'bg-emerald-50' : ''}`}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedEmployees.has(employe.id)}
+                                                    onChange={() => handleSelectEmployee(employe.id)}
+                                                    className="w-4 h-4 cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm font-medium text-gray-900 bg-gray-100 px-3 py-1 rounded-full">
                                                     #{employe.id}
@@ -397,7 +463,7 @@ const ListeEmployes = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center">
+                                        <td colSpan="8" className="px-6 py-12 text-center">
                                             <div className="flex flex-col items-center justify-center">
                                                 <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                                                     <Users className="w-8 h-8 text-gray-400" />
@@ -411,6 +477,24 @@ const ListeEmployes = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Barre d'actions pour les sélections */}
+                    {selectedEmployees.size > 0 && (
+                        <div className="bg-emerald-50 px-6 py-4 border-t border-emerald-200 flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <span className="text-sm font-medium text-emerald-800">
+                                    {selectedEmployees.size} employé(s) sélectionné(s)
+                                </span>
+                            </div>
+                            <button
+                                onClick={handleDeleteSelected}
+                                className="flex items-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Supprimer les sélections
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Modal QR Code - Même forme que vous avez demandée */}
@@ -511,6 +595,12 @@ const ListeEmployes = () => {
                     </div>
                 )}
             </div>
+            {/* Note */}
+                <div className="mt-6 text-center">
+                    <p className="text-sm text-gray-500">
+                        <strong>Note :</strong> La liste de tous vos employés.
+                    </p>
+                </div>
         </div>
     );
 };

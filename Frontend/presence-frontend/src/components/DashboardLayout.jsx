@@ -2,6 +2,14 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { employeeService, presenceService } from '../services/api';
+import { 
+  Users, 
+  UserPlus, 
+  ClipboardList, 
+  LogOut, 
+  HelpCircle,
+  LayoutDashboard 
+} from 'lucide-react';
 
 const DashboardLayout = () => {
   const location = useLocation();
@@ -68,7 +76,7 @@ const DashboardLayout = () => {
         className={`flex items-start p-4 rounded-xl transition-all duration-300 mb-3 ${
           isActive
             ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg'
-            : 'text-gray-300 hover:bg-emerald-800 hover:text-white hover:shadow-md'
+            : 'text-emerald-100/70 hover:bg-emerald-800/50 hover:text-white hover:shadow-md'
         }`}
       >
         <span className="text-2xl mr-4 flex-shrink-0 mt-1">{icon}</span>
@@ -91,19 +99,19 @@ const DashboardLayout = () => {
   const menuItems = [
     {
       to: "/admin/dashboard/liste",
-      icon: "",
+      icon: <Users size={22} />,
       text: "Liste Employés",
       desc: "Gérer tous les employés"
     },
     { 
       to: "/admin/dashboard/creation", 
-      icon: "",
+      icon: <UserPlus size={22} />,
       text: "Créer Employé",
       desc: "Ajouter un nouvel employé"
     },
     { 
       to: "/admin/dashboard/historique", 
-      icon: "",
+      icon:<ClipboardList size={22} />,
       text: "Historique Scans", 
       desc: "Voir tous les scans"
     }
@@ -115,7 +123,7 @@ const DashboardLayout = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30 pt-16">
+    <div translate='no' className="flex min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30 pt-16">
       {/* Overlay pour mobile */}
       {isMobileMenuOpen && isMobile && (
         <div 
@@ -218,6 +226,7 @@ const DashboardLayout = () => {
             onClick={handleLogout}
             className="flex items-center w-full p-3 rounded-lg bg-emerald-800/40 hover:bg-emerald-800 text-red-300 hover:text-red-100 transition-all duration-300 group"
           >
+            <LogOut size={20} className="mr-3 group-hover:-translate-x-1 transition-transform cursor-pointer" />
             <span className="text-xl mr-3 group-hover:scale-110 transition-transform cursor-pointer"></span>
             <div className="flex-1 text-left cursor-pointer">
               <span className="font-medium block">Déconnexion</span>

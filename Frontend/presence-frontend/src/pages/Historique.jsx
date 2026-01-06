@@ -147,10 +147,11 @@ const Historique = () => {
                         <Shield className="h-10 w-10 text-emerald-600" />
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent mb-3">
-                        Historique des Scans
+                        Historique des Scans pour Admin
                     </h1>
                     <p className="text-gray-600 max-w-sm mx-auto">
-                        Consultez l'historique complet des enregistrements de présence
+                        Consultez l'historique complet des enregistrements de présence de vos employés.
+                        <h3>seul l'Admin peux Voir l'historique</h3>
                     </p>
                 </div>
 

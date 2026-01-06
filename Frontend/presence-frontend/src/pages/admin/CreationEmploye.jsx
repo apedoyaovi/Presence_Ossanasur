@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Loader2, Plus, XCircle, Info, Edit } from 'lucide-react';
+import { Loader2, Plus, XCircle, Info, Edit, Check } from 'lucide-react';
 import { employeeService } from '../../services/api'; 
 
 const CreationEmploye = () => {
@@ -30,6 +30,20 @@ const CreationEmploye = () => {
     const [pageError, setPageError] = useState(null);
 
     const isEditMode = !!employeeId;
+
+    // Définir les postes par département
+    const positionsByDepartment = {
+        'Développement': ['Développeur Frontend', 'Développeur Backend', 'Développeur Full Stack', 'DevOps Engineer', 'Architecte Logiciel'],
+        'Marketing': ['Responsable Marketing', 'Spécialiste SEO/SEM', 'Community Manager', 'Content Manager', 'Analyste Marketing'],
+        'Ressources Humaines': ['Responsable RH', 'Recruteur', 'Gestionnaire de Paie', 'Chargé de Formation', 'Responsable Compensation'],
+        'Finance': ['Directeur Financier', 'Comptable', 'Contrôleur de Gestion', 'Trésorier', 'Analyste Financier'],
+        'Commercial': ['Directeur Commercial', 'Chef de Ventes', 'Commercial Terrain', 'Account Manager', 'Business Développeur'],
+        'Support': ['Responsable Support', 'Technicien Support', 'Helpdesk', 'Support Client', 'Technical Support Engineer'],
+        'Direction': ['PDG', 'Directeur Général', 'Directeur Exécutif', 'Président']
+    };
+
+    // Obtenir les postes suggérés basés sur le département sélectionné
+    const suggestedPositions = formData.department ? positionsByDepartment[formData.department] || [] : [];
 
     const title = isEditMode ? "Modifier l'employé" : "Ajouter un employé";
 
@@ -315,14 +329,43 @@ const CreationEmploye = () => {
                                         <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
                                             Poste
                                         </label>
-                                        <input
-                                            type="text"
-                                            id="position"
-                                            value={formData.position}
-                                            onChange={handleChange}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                                            placeholder="Ex: Développeur Full Stack"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                id="position"
+                                                value={formData.position}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                                                placeholder={formData.department ? "Sélectionnez ou tapez un poste" : "Veuillez d'abord sélectionner un département"}
+                                                disabled={!formData.department}
+                                            />
+                                            
+                                            {/* Liste des suggestions de postes */}
+                                            {formData.department && suggestedPositions.length > 0 && !formData.position && (
+                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                                                    {suggestedPositions.map((pos) => (
+                                                        <button
+                                                            key={pos}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    position: pos
+                                                                }));
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 hover:bg-emerald-50 transition-colors flex items-center justify-between"
+                                                        >
+                                                            <span>{pos}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {formData.department && suggestedPositions.length > 0 && !formData.position && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Cliquez sur un poste pour le sélectionner ou continuez à taper pour un poste personnalisé
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Date d'embauche (hireDate) */}
@@ -335,7 +378,8 @@ const CreationEmploye = () => {
                                             id="hireDate"
                                             value={formData.hireDate}
                                             onChange={handleChange}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                                            max={new Date().toISOString().split('T')[0]}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                                         />
                                     </div>
 
@@ -350,7 +394,7 @@ const CreationEmploye = () => {
                                             value={formData.phone}
                                             onChange={handleChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                                            placeholder="+33 1 23 45 67 89"
+                                            placeholder="+228 90 12 34 56"
                                         />
                                     </div>
                                 </div>
@@ -373,7 +417,7 @@ const CreationEmploye = () => {
                                             value={formData.address}
                                             onChange={handleChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                                            placeholder="123 Rue de l'Exemple"
+                                            placeholder="Agoè plateau, Rue 123"
                                         />
                                     </div>
 
@@ -388,7 +432,7 @@ const CreationEmploye = () => {
                                             value={formData.city}
                                             onChange={handleChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                                            placeholder="Paris"
+                                            placeholder="Lomé"
                                         />
                                     </div>
 
@@ -403,7 +447,7 @@ const CreationEmploye = () => {
                                             value={formData.postalCode}
                                             onChange={handleChange}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                                            placeholder="75000"
+                                            placeholder="0000"
                                         />
                                     </div>
                                 </div>
